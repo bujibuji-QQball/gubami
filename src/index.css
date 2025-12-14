@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 這行是為了確保背景色能填滿整個螢幕 */
+body {
+  background-color: #fcfaf2; 
+}
