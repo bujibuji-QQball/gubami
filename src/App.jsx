@@ -20,7 +20,7 @@ export default function App() {
   const [showAddShoppingModal, setShowAddShoppingModal] = useState(false);
   const [newShoppingItem, setNewShoppingItem] = useState({
     name: '',
-    category: 'drugstore',
+    category: 'drugstore', // 預設分類
     desc: '',
     location: '',
     price: ''
@@ -28,16 +28,16 @@ export default function App() {
   const [showDeleteShoppingConfirm, setShowDeleteShoppingConfirm] = useState(false);
   const [shoppingItemToDelete, setShoppingItemToDelete] = useState(null); 
 
-  // 編輯模式狀態
+  // 編輯模式狀態 (控制是否顯示刪除按鈕)
   const [isEditMode, setIsEditMode] = useState(false);
 
   // 新增行程的彈窗狀態
   const [showAddEventModal, setShowAddEventModal] = useState(false);
-   
+    
   // 刪除確認的彈窗狀態
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null); 
-   
+    
   // 新增清單景點的彈窗狀態
   const [showAddRecModal, setShowAddRecModal] = useState(false);
   const [newRecItem, setNewRecItem] = useState({
@@ -47,7 +47,7 @@ export default function App() {
     desc: '',
     query: ''
   });
-   
+    
   // 刪除清單景點的確認彈窗
   const [showDeleteRecConfirm, setShowDeleteRecConfirm] = useState(false);
   const [recItemToDelete, setRecItemToDelete] = useState(null); 
@@ -269,6 +269,7 @@ export default function App() {
     }));
   };
 
+  // 修改：打開 Modal 時不再強制綁定分類，或者給一個預設值
   const openShoppingModal = (category = 'drugstore') => {
     setNewShoppingItem(prev => ({ ...prev, category }));
     setShowAddShoppingModal(true);
@@ -545,8 +546,16 @@ export default function App() {
 
   const confirmDelete = () => {
     if (eventToDelete) {
+      // 深度複製以避免狀態變異問題
       const newItinerary = [...itinerary];
-      newItinerary[eventToDelete.dayIndex].events.splice(eventToDelete.eventIndex, 1);
+      const updatedEvents = [...newItinerary[eventToDelete.dayIndex].events];
+      updatedEvents.splice(eventToDelete.eventIndex, 1);
+      
+      newItinerary[eventToDelete.dayIndex] = {
+          ...newItinerary[eventToDelete.dayIndex],
+          events: updatedEvents
+      };
+      
       setItinerary(newItinerary);
       setEventToDelete(null);
       setShowDeleteConfirm(false);
@@ -556,25 +565,25 @@ export default function App() {
   const addNewEvent = () => {
     if (!newEvent.time || !newEvent.title) return;
     const newItinerary = [...itinerary];
-     
+      
     // 自訂交通資訊
     let customTransit = null;
     if (newEvent.hasTransit) {
-        // 如果有填寫自訂 URL，直接使用；否則使用自動生成的連結
-        // 為了自動生成，我們需要知道起點。這裡假設起點是「上一個行程點」。
-        const prevEvent = newItinerary[selectedDay].events[newItinerary[selectedDay].events.length - 1];
-        const fromLoc = prevEvent ? (prevEvent.location || prevEvent.title) : 'Current Location';
-        
-        customTransit = {
-            type: newEvent.transitType,
-            time: newEvent.transitTime || '??m',
-            desc: newEvent.transitDesc || '移動',
-            detail: newEvent.transitDetail || '無詳細說明',
-            from: fromLoc,
-            to: newEvent.location || newEvent.title,
-            // 優先使用使用者輸入的 URL
-            customUrl: newEvent.transitUrl
-        };
+       // 如果有填寫自訂 URL，直接使用；否則使用自動生成的連結
+       // 為了自動生成，我們需要知道起點。這裡假設起點是「上一個行程點」。
+       const prevEvent = newItinerary[selectedDay].events[newItinerary[selectedDay].events.length - 1];
+       const fromLoc = prevEvent ? (prevEvent.location || prevEvent.title) : 'Current Location';
+       
+       customTransit = {
+           type: newEvent.transitType,
+           time: newEvent.transitTime || '??m',
+           desc: newEvent.transitDesc || '移動',
+           detail: newEvent.transitDetail || '無詳細說明',
+           from: fromLoc,
+           to: newEvent.location || newEvent.title,
+           // 優先使用使用者輸入的 URL
+           customUrl: newEvent.transitUrl
+       };
     }
 
     const eventToAdd = {
@@ -703,7 +712,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-[#fcfaf2] font-sans text-slate-800 overflow-hidden max-w-md mx-auto shadow-2xl relative">
-       
+        
       {/* 頂部 Header */}
       <div className="bg-[#fcfaf2] px-6 pt-12 pb-4 z-10 border-b border-stone-200">
         <div className="flex justify-between items-end mb-2">
@@ -712,7 +721,7 @@ export default function App() {
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">牛肉麵 🇯🇵</h1>
           </div>
           <span className="text-xs font-bold px-3 py-1 bg-slate-900 text-white rounded-full">2025</span>
-           
+            
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
             className={`ml-2 p-1.5 rounded-full transition-colors ${isEditMode ? 'bg-indigo-500 text-white' : 'bg-stone-200 text-stone-500'}`}
@@ -777,12 +786,12 @@ export default function App() {
                 const isTransitExpanded = expandedTransits[`${selectedDay}-${idx}`];
                 return (
                   <div key={idx} className="relative pb-6 last:pb-0">
-                     
+                      
                     {/* 交通連接線 (如果有的話) */}
                     {event.transit && (
                         <div className="flex flex-col mb-4 pl-2 opacity-80">
                             <div className="w-[1px] h-full bg-stone-300 absolute left-[29px] top-[-20px] bottom-10 z-0 border-l border-dashed border-stone-300"></div>
-                             
+                              
                             {/* 交通按鈕 (可點擊展開) */}
                             <div 
                               className="ml-10 flex items-center gap-2 text-xs text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full border border-stone-200 shadow-sm z-10 cursor-pointer w-fit hover:bg-stone-200 transition-colors"
@@ -835,7 +844,7 @@ export default function App() {
                             )}
                         </div>
                     )}
-                     
+                      
                     <div className={`relative rounded-2xl shadow-sm transition-all duration-300 ${getTypeColor(event.type)} overflow-hidden z-10`}>
                         {/* 卡片標題區 (可點擊展開/收合) */}
                         <div 
@@ -847,7 +856,7 @@ export default function App() {
                             <div className="mt-1 w-8 h-8 flex items-center justify-center bg-stone-50 rounded-full shadow-inner border border-stone-100 shrink-0">
                             {getTypeIcon(event.type)}
                             </div>
-                             
+                              
                             <div className="flex-1 min-w-0">
                             {/* 時間與標籤 */}
                             <div className="flex items-center flex-wrap gap-2 mb-1">
@@ -865,7 +874,7 @@ export default function App() {
                                 {event.type === 'shopping' && <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">必買清單</span>}
                                 {event.type === 'sight' && <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">景點</span>}
                             </div>
-                             
+                              
                             {isEditMode ? (
                               <input 
                                 type="text" 
@@ -882,13 +891,13 @@ export default function App() {
                             </div>
                             </div>
                         </div>
-                         
-                        {/* 展開指示箭頭 */}
+                          
+                        {/* 展開指示箭頭或刪除按鈕 */}
                         <div className="text-stone-300 ml-2 mt-2">
                           {isEditMode ? (
                             <button 
                               onClick={(e) => { e.stopPropagation(); deleteEvent(selectedDay, idx); }}
-                              className="text-red-400 hover:text-red-600"
+                              className="text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded-full"
                             >
                               <Trash2 className="w-5 h-5" />
                             </button>
@@ -902,7 +911,7 @@ export default function App() {
                         {(isExpanded || isEditMode) && (
                         <div className="px-5 pb-5 pt-0 animate-fadeIn">
                             <div className="border-t border-stone-100 pt-3 space-y-4">
-                             
+                              
                             {/* 詳細筆記 */}
                             <div>
                                 <p className="text-xs font-bold text-stone-400 uppercase mb-1">Note</p>
@@ -943,10 +952,6 @@ export default function App() {
                                 >
                                 <Navigation className="w-3 h-3" /> 導航前往
                                 </button>
-                                {/* <button className="flex-1 py-2 bg-stone-50 text-stone-500 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-stone-100 transition-colors">
-                                <Edit3 className="w-3 h-3" /> 編輯筆記
-                                </button>
-                                */}
                             </div>
                             </div>
                         </div>
@@ -1056,7 +1061,7 @@ export default function App() {
 
                   {newEvent.hasTransit && (
                     <div className="space-y-3 bg-stone-50 p-3 rounded-lg border border-stone-200 animate-fadeIn">
-                       <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-[10px] font-bold text-stone-400 block mb-1">方式</label>
                             <select 
@@ -1080,8 +1085,8 @@ export default function App() {
                               onChange={(e) => setNewEvent({...newEvent, transitTime: e.target.value})}
                             />
                           </div>
-                       </div>
-                       <div>
+                        </div>
+                        <div>
                           <label className="text-[10px] font-bold text-stone-400 block mb-1">簡述</label>
                           <input 
                             type="text" 
@@ -1090,8 +1095,8 @@ export default function App() {
                             value={newEvent.transitDesc}
                             onChange={(e) => setNewEvent({...newEvent, transitDesc: e.target.value})}
                           />
-                       </div>
-                       <div>
+                        </div>
+                        <div>
                           <label className="text-[10px] font-bold text-stone-400 block mb-1">詳細說明</label>
                           <textarea 
                             placeholder="轉乘資訊、票價等..."
@@ -1100,8 +1105,8 @@ export default function App() {
                             value={newEvent.transitDetail}
                             onChange={(e) => setNewEvent({...newEvent, transitDetail: e.target.value})}
                           />
-                       </div>
-                       <div>
+                        </div>
+                        <div>
                           <label className="text-[10px] font-bold text-stone-400 flex items-center gap-1 mb-1">
                              <Link className="w-3 h-3" /> 自訂導航連結 (選填)
                           </label>
@@ -1112,7 +1117,7 @@ export default function App() {
                             value={newEvent.transitUrl}
                             onChange={(e) => setNewEvent({...newEvent, transitUrl: e.target.value})}
                           />
-                       </div>
+                        </div>
                     </div>
                   )}
                 </div>
@@ -1137,7 +1142,7 @@ export default function App() {
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">確定要刪除嗎？</h3>
               <p className="text-sm text-stone-500 mb-6">刪除後將無法復原此行程。</p>
-               
+                
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowDeleteConfirm(false)}
@@ -1156,6 +1161,84 @@ export default function App() {
           </div>
         )}
         
+        {/* 新增購物商品 Modal (修改版: 可選分類) */}
+        {showAddShoppingModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl animate-fadeIn">
+               <div className="flex justify-between items-center mb-4">
+                 <h3 className="text-lg font-bold text-slate-800">新增購物清單</h3>
+                 <button onClick={() => setShowAddShoppingModal(false)} className="text-stone-400 hover:text-stone-600">
+                   <X className="w-6 h-6" />
+                 </button>
+               </div>
+
+               <div className="space-y-3">
+                 <div>
+                    <label className="text-xs font-bold text-stone-500 block mb-1">分類</label>
+                    <select 
+                      className="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm focus:outline-none focus:border-indigo-500"
+                      value={newShoppingItem.category}
+                      onChange={(e) => setNewShoppingItem({...newShoppingItem, category: e.target.value})}
+                    >
+                       <option value="drugstore">藥妝類</option>
+                       <option value="conbini">超商必買</option>
+                       <option value="supermarket">超市尋寶</option>
+                       <option value="souvenir">伴手禮</option>
+                       <option value="other">其他</option>
+                    </select>
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-stone-500 block mb-1">商品名稱</label>
+                   <input 
+                     type="text" 
+                     className="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm focus:outline-none focus:border-indigo-500"
+                     placeholder="例: 昆布鹽"
+                     value={newShoppingItem.name}
+                     onChange={(e) => setNewShoppingItem({...newShoppingItem, name: e.target.value})}
+                   />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-stone-500 block mb-1">參考價格</label>
+                   <input 
+                     type="text" 
+                     className="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm focus:outline-none focus:border-indigo-500"
+                     placeholder="例: ¥400"
+                     value={newShoppingItem.price}
+                     onChange={(e) => setNewShoppingItem({...newShoppingItem, price: e.target.value})}
+                   />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-stone-500 block mb-1">購買地點/備註</label>
+                   <input 
+                     type="text" 
+                     className="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm focus:outline-none focus:border-indigo-500"
+                     placeholder="例: 各大超市"
+                     value={newShoppingItem.location}
+                     onChange={(e) => setNewShoppingItem({...newShoppingItem, location: e.target.value})}
+                   />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-stone-500 block mb-1">描述</label>
+                   <input 
+                     type="text" 
+                     className="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-sm focus:outline-none focus:border-indigo-500"
+                     placeholder="功能或特色..."
+                     value={newShoppingItem.desc}
+                     onChange={(e) => setNewShoppingItem({...newShoppingItem, desc: e.target.value})}
+                   />
+                 </div>
+               </div>
+
+               <button 
+                 onClick={addNewShoppingItem}
+                 className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl mt-6 hover:bg-indigo-700 transition-colors shadow-lg"
+               >
+                 加入清單
+               </button>
+             </div>
+          </div>
+        )}
+
         {/* 刪除購物商品確認 Modal */}
         {showDeleteShoppingConfirm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -1164,7 +1247,7 @@ export default function App() {
                 <AlertCircle className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">確定要刪除此商品嗎？</h3>
-               
+                
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowDeleteShoppingConfirm(false)}
@@ -1191,7 +1274,7 @@ export default function App() {
                 <AlertCircle className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">確定要刪除此景點嗎？</h3>
-               
+                
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowDeleteRecConfirm(false)}
@@ -1297,7 +1380,7 @@ export default function App() {
         {/* 深度旅遊推薦分頁 (Deep Dive) */}
         {activeTab === 'recommendations' && (
           <div className="px-5 py-6 space-y-4">
-             
+              
             {/* 地區選擇 Tab */}
             <div className="flex space-x-2 overflow-x-auto pb-2 hide-scrollbar">
               {Object.keys(recommendationsData).map((key) => (
@@ -1330,7 +1413,7 @@ export default function App() {
                         <span className="text-sm font-bold text-slate-700">{getCategoryName(categoryKey)}</span>
                         <span className="text-xs text-stone-400 font-mono">({spots.length})</span>
                       </div>
-                       
+                        
                       <div className="flex items-center gap-3">
                         {isCatExpanded && (
                            <button 
@@ -1343,7 +1426,7 @@ export default function App() {
                         {isCatExpanded ? <ChevronUp className="w-4 h-4 text-stone-400" /> : <ChevronDown className="w-4 h-4 text-stone-400" />}
                       </div>
                     </div>
-                     
+                      
                     {isCatExpanded && (
                       <div className="divide-y divide-stone-50">
                         {spots.map((spot, index) => (
@@ -1360,7 +1443,7 @@ export default function App() {
                                   <MapPin className="w-4 h-4" />
                                   <span className="text-[8px] font-bold">GO</span>
                                 </button>
-                                 
+                                  
                                 {/* 刪除按鈕 */}
                                 <button 
                                   onClick={() => deleteRecItem(selectedRecArea, categoryKey, index)}
@@ -1377,7 +1460,7 @@ export default function App() {
                 );
               })}
             </div>
-             
+              
             {/* 全域新增景點按鈕 */}
              <div className="fixed bottom-24 right-5 z-20">
                <button 
@@ -1399,7 +1482,6 @@ export default function App() {
                  const isExpanded = expandedShoppingCats[key];
                  return (
                    <div key={key} className="bg-white rounded-xl border border-stone-100 shadow-sm overflow-hidden">
-                     {/* 將 button 改為 div，並加上 onClick，解決嵌套問題 */}
                      <div
                        onClick={() => toggleShoppingCategory(key)}
                        className="w-full px-5 py-3 flex items-center justify-between bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"
@@ -1408,15 +1490,6 @@ export default function App() {
                        
                        <div className="flex items-center gap-3">
                            <span className="text-xs text-stone-400 bg-white px-2 py-0.5 rounded-full border border-stone-100">{category.items.length}</span>
-                           {/* 分類新增按鈕 (僅在展開時顯示) */}
-                           {isExpanded && (
-                               <button 
-                                 onClick={(e) => { e.stopPropagation(); openShoppingModal(key); }}
-                                 className="p-1 rounded-full bg-indigo-50 text-indigo-500 hover:bg-indigo-100"
-                               >
-                                 <Plus className="w-4 h-4" />
-                               </button>
-                           )}
                            {isExpanded ? <ChevronUp className="w-4 h-4 text-stone-400" /> : <ChevronDown className="w-4 h-4 text-stone-400" />}
                        </div>
                      </div>
@@ -1467,10 +1540,10 @@ export default function App() {
                })}
              </div>
              
-             {/* 全域新增商品按鈕 */}
+             {/* 全域新增商品按鈕 (FAB) */}
              <div className="fixed bottom-24 right-5 z-20">
                <button 
-                 onClick={() => setShowAddShoppingModal(true)}
+                 onClick={() => openShoppingModal()}
                  className="w-14 h-14 bg-slate-800 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-700 transition-transform active:scale-95"
                >
                  <Plus className="w-6 h-6" />
@@ -1555,9 +1628,9 @@ export default function App() {
                <div className="bg-white p-4 rounded-2xl border border-stone-100 text-sm text-slate-700 space-y-3">
                  <p className="text-xs text-stone-500 mb-2">日本路上大多禁止吸菸，請至指定吸菸區。</p>
                  <div className="grid grid-cols-1 gap-3">
-                   <a href="https://www.clubjt.jp/map/?date=20251214" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-stone-50 rounded-xl hover:bg-stone-100 transition-colors">
+                   <a href="https://www.google.com/search?q=club+JT" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 bg-stone-50 rounded-xl hover:bg-stone-100 transition-colors">
                      <Search className="w-4 h-4 text-stone-400" />
-                     <span className="font-bold text-xs">CLUB JT 吸菸所搜尋</span>
+                     <span className="font-bold text-xs">CLUB JT 吸菸所搜尋 (Google)</span>
                    </a>
                  </div>
                </div>
@@ -1618,7 +1691,7 @@ export default function App() {
           <span className="text-[10px] font-bold">資訊</span>
         </button>
       </div>
-       
+        
       <style>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
