@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Utensils, Train, ShoppingBag, Sun, CloudRain, Cloud, Calendar, Phone, Home, Ticket, Plane, Info, ChevronRight, QrCode, ChevronDown, ChevronUp, Map, Star, Plus, Camera, Coffee, Music, BookOpen, Gift, Edit3, Footprints, Bus, Car, Save, Trash2, X, Banknote, PlusCircle, AlertCircle, Link, ShoppingCart, Store, Package, Search, Cigarette } from 'lucide-react';
+import { MapPin, Navigation, Utensils, Train, ShoppingBag, Sun, CloudRain, Cloud, Calendar, Phone, Home, Ticket, Plane, Info, ChevronRight, QrCode, ChevronDown, ChevronUp, Map, Star, Plus, Camera, Coffee, Music, BookOpen, Gift, Edit3, Footprints, Bus, Car, Save, Trash2, X, Banknote, PlusCircle, AlertCircle, Link, ShoppingCart, Store, Package, Search, Cigarette, Wind, Droplets, ThermometerSun, Sunrise, Sunset, RefreshCw, Umbrella, Gauge } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('itinerary');
@@ -8,6 +8,11 @@ export default function App() {
   const [expandedEvents, setExpandedEvents] = useState({});
   const [expandedCategories, setExpandedCategories] = useState({});
   const [expandedTransits, setExpandedTransits] = useState({});
+
+  // 天氣狀態
+  const [weatherData, setWeatherData] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // 購物清單相關狀態
   const [expandedShoppingCats, setExpandedShoppingCats] = useState({
@@ -369,16 +374,69 @@ export default function App() {
     }
   };
 
-  // 模擬天氣數據
-  const weatherMock = {
-    0: { temp: '8°C', icon: <Sun className="w-5 h-5 text-orange-400" />, desc: '晴時多雲' },
-    1: { temp: '7°C', icon: <Cloud className="w-5 h-5 text-gray-400" />, desc: '陰天' },
-    2: { temp: '9°C', icon: <Sun className="w-5 h-5 text-orange-400" />, desc: '晴朗' },
-    3: { temp: '6°C', icon: <CloudRain className="w-5 h-5 text-blue-400" />, desc: '偶雨' },
-    4: { temp: '8°C', icon: <Sun className="w-5 h-5 text-orange-400" />, desc: '晴朗' },
-    5: { temp: '7°C', icon: <Cloud className="w-5 h-5 text-gray-400" />, desc: '多雲' },
-    6: { temp: '9°C', icon: <Sun className="w-5 h-5 text-orange-400" />, desc: '晴朗' },
+  // 天氣資料處理
+  const LOCATIONS_COORDS = {
+    0: { lat: 35.6938, lon: 139.7034 }, // Shinjuku (Day 1)
+    1: { lat: 35.6580, lon: 139.7016 }, // Shibuya (Day 2)
+    2: { lat: 34.9731, lon: 139.0985 }, // Ito (Day 3)
+    3: { lat: 34.9080, lon: 139.1065 }, // Izu (Day 4)
+    4: { lat: 35.6586, lon: 139.7454 }, // Tokyo Tower (Day 5)
+    5: { lat: 35.7148, lon: 139.7967 }, // Asakusa (Day 6)
+    6: { lat: 35.7719, lon: 140.3929 }, // Narita (Day 7)
   };
+
+  const getWeatherIcon = (code) => {
+    if (code === 0) return <Sun className="w-5 h-5 text-orange-400" />;
+    if (code >= 1 && code <= 3) return <Cloud className="w-5 h-5 text-gray-400" />;
+    if (code >= 45 && code <= 48) return <Cloud className="w-5 h-5 text-gray-400" />; // Fog
+    if (code >= 51 && code <= 67) return <CloudRain className="w-5 h-5 text-blue-400" />; // Rain
+    if (code >= 71 && code <= 77) return <CloudRain className="w-5 h-5 text-indigo-400" />; // Snow
+    if (code >= 80 && code <= 82) return <CloudRain className="w-5 h-5 text-blue-500" />; // Showers
+    return <Sun className="w-5 h-5 text-orange-400" />;
+  };
+
+  const getWeatherDesc = (code) => {
+    const codes = {
+      0: '晴朗無雲',
+      1: '大致晴朗', 2: '多雲', 3: '陰天',
+      45: '起霧', 48: '白霜霧',
+      51: '毛毛雨', 53: '毛毛雨', 55: '毛毛雨',
+      61: '小雨', 63: '中雨', 65: '大雨',
+      80: '陣雨', 81: '陣雨', 82: '強陣雨',
+    };
+    return codes[code] || '晴時多雲';
+  };
+
+  const formatTime = (isoString) => {
+    if (!isoString) return '--:--';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  const fetchWeather = async (dayIndex) => {
+    setWeatherLoading(true);
+    const coords = LOCATIONS_COORDS[dayIndex] || LOCATIONS_COORDS[0];
+    try {
+      // Fetching current conditions + daily forecast for 'today' context
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days=1`
+      );
+      const data = await response.json();
+      setWeatherData({
+          current: data.current,
+          daily: data.daily
+      });
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error("Failed to fetch weather", error);
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather(selectedDay);
+  }, [selectedDay]);
 
   // 將行程資料庫轉為 State，以便編輯
   const [itinerary, setItinerary] = useState([
@@ -759,23 +817,114 @@ export default function App() {
               </div>
             </div>
 
-            {/* 天氣與地點概況 */}
+            {/* 天氣與地點概況 (Live Weather) */}
             <div className="mx-5 mt-6 mb-4">
-              <div className="bg-white rounded-2xl p-5 flex items-center justify-between shadow-sm border border-stone-100">
-                <div>
-                  <p className="text-xs text-stone-400 font-bold uppercase tracking-wider mb-1">CURRENT LOCATION</p>
-                  <p className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-indigo-500" />
-                    {itinerary[selectedDay].location}
-                  </p>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                           LIVE WEATHER
+                        </p>
+                        <button 
+                          onClick={() => fetchWeather(selectedDay)} 
+                          className={`p-1 rounded-full bg-stone-50 hover:bg-stone-100 text-stone-400 transition-all ${weatherLoading ? 'animate-spin' : ''}`}
+                        >
+                            <RefreshCw className="w-3 h-3" />
+                        </button>
+                    </div>
+                    {lastUpdated && (
+                        <span className="text-[9px] text-stone-300 font-mono">
+                            更新: {lastUpdated.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    )}
                 </div>
-                <div className="flex flex-col items-end">
-                  <div className="flex items-center gap-2">
-                    {weatherMock[selectedDay].icon}
-                    <span className="text-2xl font-bold text-slate-800">{weatherMock[selectedDay].temp}</span>
-                  </div>
-                  <span className="text-xs text-stone-400">{weatherMock[selectedDay].desc}</span>
+                
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <p className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <MapPin className="w-5 h-5 text-indigo-500" />
+                            {itinerary[selectedDay].location}
+                        </p>
+                    </div>
+                    <div className="flex flex-col items-end">
+                       {weatherLoading ? (
+                           <div className="animate-pulse flex flex-col items-end gap-1">
+                               <div className="h-8 w-16 bg-stone-200 rounded"></div>
+                               <div className="h-4 w-12 bg-stone-200 rounded"></div>
+                           </div>
+                       ) : weatherData ? (
+                           <>
+                                <div className="flex items-center gap-2">
+                                    {getWeatherIcon(weatherData.current.weather_code)}
+                                    <span className="text-3xl font-bold text-slate-800">{weatherData.current.temperature_2m}<span className="text-lg align-top">°C</span></span>
+                                </div>
+                                <span className="text-xs text-stone-500 font-medium">{getWeatherDesc(weatherData.current.weather_code)}</span>
+                           </>
+                       ) : (
+                           <span className="text-xs text-stone-400">無法取得天氣</span>
+                       )}
+                    </div>
                 </div>
+                
+                {/* 詳細天氣資訊 Grid */}
+                {weatherData && !weatherLoading && (
+                  <>
+                    <div className="grid grid-cols-4 gap-2 pt-4 border-t border-stone-100">
+                        {/* 體感溫度 */}
+                        <div className="flex flex-col items-center justify-center p-2 bg-stone-50 rounded-xl">
+                             <ThermometerSun className="w-4 h-4 text-orange-400 mb-1" />
+                             <span className="text-xs font-bold text-slate-700">{weatherData.current.apparent_temperature}°</span>
+                             <span className="text-[9px] text-stone-400">體感</span>
+                        </div>
+                        {/* 降雨機率 */}
+                        <div className="flex flex-col items-center justify-center p-2 bg-stone-50 rounded-xl">
+                             <Umbrella className="w-4 h-4 text-blue-400 mb-1" />
+                             <span className="text-xs font-bold text-slate-700">{weatherData.daily.precipitation_probability_max[0]}%</span>
+                             <span className="text-[9px] text-stone-400">降雨機率</span>
+                        </div>
+                        {/* 濕度 */}
+                        <div className="flex flex-col items-center justify-center p-2 bg-stone-50 rounded-xl">
+                             <Droplets className="w-4 h-4 text-sky-400 mb-1" />
+                             <span className="text-xs font-bold text-slate-700">{weatherData.current.relative_humidity_2m}%</span>
+                             <span className="text-[9px] text-stone-400">濕度</span>
+                        </div>
+                        {/* 紫外線 */}
+                         <div className="flex flex-col items-center justify-center p-2 bg-stone-50 rounded-xl">
+                             <Sun className="w-4 h-4 text-amber-500 mb-1" />
+                             <span className="text-xs font-bold text-slate-700">{weatherData.daily.uv_index_max[0]}</span>
+                             <span className="text-[9px] text-stone-400">UV指數</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                        {/* 日出日落 */}
+                        <div className="flex items-center justify-between p-2 bg-stone-50 rounded-xl px-3">
+                            <div className="flex items-center gap-2">
+                                <Sunrise className="w-4 h-4 text-orange-300" />
+                                <span className="text-xs font-bold text-slate-600">{formatTime(weatherData.daily.sunrise[0])}</span>
+                            </div>
+                            <div className="w-[1px] h-3 bg-stone-200"></div>
+                            <div className="flex items-center gap-2">
+                                <Sunset className="w-4 h-4 text-indigo-300" />
+                                <span className="text-xs font-bold text-slate-600">{formatTime(weatherData.daily.sunset[0])}</span>
+                            </div>
+                        </div>
+                        
+                        {/* 風速與氣壓 */}
+                        <div className="flex items-center justify-between p-2 bg-stone-50 rounded-xl px-3">
+                             <div className="flex items-center gap-1.5">
+                                <Wind className="w-4 h-4 text-stone-400" />
+                                <span className="text-xs font-bold text-slate-600">{weatherData.current.wind_speed_10m} <span className="text-[8px] font-normal">km/h</span></span>
+                             </div>
+                             <div className="flex items-center gap-1.5">
+                                <Gauge className="w-4 h-4 text-stone-400" />
+                                <span className="text-xs font-bold text-slate-600">{weatherData.current.surface_pressure} <span className="text-[8px] font-normal">hPa</span></span>
+                             </div>
+                        </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -978,6 +1127,7 @@ export default function App() {
           </>
         )}
 
+        {/* ... existing code for modals ... */}
         {/* 新增行程 Modal */}
         {showAddEventModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -1552,6 +1702,7 @@ export default function App() {
           </div>
         )}
 
+        {/* ... existing code ... */}
         {/* 資訊分頁 (Info Tab) */}
         {activeTab === 'info' && (
           <div className="px-5 py-6 space-y-6">
